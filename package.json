@@ -8,12 +8,12 @@
         "url": "https://github.com/GlennPizon/Final.git"
     },
     "scripts": {
-        "build": "ng build --configuration=production",
+        "build": "npx ng build --configuration=production",
         "start": "node ./server.js",
         "start:dev": "nodemon ./server.js"
     },
     "dependencies": {
-        "@angular/cli": "^19.2.12",
+        "@angular/cli": "^17.0.0",
         "bcryptjs": "^2.4.3",
         "body-parser": "^1.19.0",
         "cookie-parser": "^1.4.5",
