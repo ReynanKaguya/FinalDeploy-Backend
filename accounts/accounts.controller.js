@@ -16,6 +16,7 @@ router.post('/verify-email', verifyEmailSchema, verifyEmail);
 router.post('/forgot-password', forgotPasswordSchema, forgotPassword);
 router.post('/validate-reset-token', validateResetTokenSchema, validateResetToken);
 router.post('/reset-password', resetPasswordSchema, resetPassword);
+router.get('/all', getAll);
 router.get('/', authorize(Role.Admin), getAll);
 router.get('/user', authorize(Role.User), getAll);
 router.get('/:id', authorize(), getById);
@@ -37,8 +38,11 @@ function authenticate(req, res, next) {
     const { email, password } = req.body;
     const ipAddress = req.ip;
     
+    console.log('Authentication attempt:', { email, ipAddress });
+    
     accountService.authenticate({ email, password, ipAddress })
         .then(({ refreshToken, token, ...account }) => {
+            console.log('Authentication successful for:', email);
             // Set refresh token in HTTP-only cookie
             setTokenCookie(res, refreshToken);
             
@@ -49,9 +53,16 @@ function authenticate(req, res, next) {
             });
         })
         .catch(error => {
-            console.error('Authentication error:', error);
+            console.error('Authentication error:', {
+                email,
+                error: error.message,
+                stack: error.stack
+            });
+            
+            // Return consistent error format
             res.status(400).json({ 
-                message: typeof error === 'string' ? error : 'Authentication failed'
+                error: typeof error === 'string' ? error : 'Authentication failed',
+                details: error.message
             });
         });
 }
@@ -105,12 +116,33 @@ function registerSchema(req, res, next) {
 }
 
 function register(req, res, next) {
+    console.log('Registration attempt:', {
+        email: req.body.email,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName
+    });
+    
     accountService.register(req.body, req.get('origin'))
-        .then(account => res.json({ 
-            message: 'Registration successful, please check your email for verification instructions', 
-            verificationToken: account.verificationToken 
-        }))
-        .catch(next);
+        .then(account => {
+            console.log('Registration successful for:', req.body.email);
+            res.json({ 
+                message: 'Registration successful, please check your email for verification instructions', 
+                verificationToken: account.verificationToken 
+            });
+        })
+        .catch(error => {
+            console.error('Registration error:', {
+                email: req.body.email,
+                error: error.message,
+                stack: error.stack
+            });
+            
+            // Return consistent error format
+            res.status(400).json({
+                error: 'Registration failed',
+                details: error.message
+            });
+        });
 }
 
 function verifyEmailSchema(req, res, next) {

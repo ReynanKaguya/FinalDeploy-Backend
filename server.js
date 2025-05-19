@@ -4,9 +4,47 @@ const app = express();
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const path = require('path');
 const errorHandler = require('_middleware/error-handler');
 const seedAdmin = require('./scripts/seed-admin');
 const net = require('net');
+
+// CORS configuration
+const allowedOrigins = [
+    'http://localhost:4200',  // Angular dev server
+    /^https:\/\/.*\.netlify\.app$/  // All Netlify subdomains
+];
+
+app.use(cors({
+    origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Check if origin matches any allowed pattern
+        const isAllowed = allowedOrigins.some(allowed => {
+            if (allowed instanceof RegExp) {
+                return allowed.test(origin);
+            }
+            return allowed === origin;
+        });
+        
+        if (!isAllowed) {
+            console.log('CORS blocked request from origin:', origin);
+            return callback(new Error('Not allowed by CORS'), false);
+        }
+        
+        console.log('CORS allowed request from origin:', origin);
+        return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 86400 // 24 hours
+}));
+
+// Handle preflight requests
+app.options('*', cors());
 
 // Utility function to find an available port
 async function getAvailablePort(startPort) {
@@ -25,6 +63,7 @@ async function getAvailablePort(startPort) {
             return port;
         } catch (err) {
             if (err.code !== 'EADDRINUSE') throw err;
+            // Port is in use, try next one
             continue;
         }
     }
@@ -33,8 +72,10 @@ async function getAvailablePort(startPort) {
 
 async function initializeServer() {
     try {
+        // Get base port from environment or default
         const basePort = parseInt(process.env.PORT || '4000', 10);
         
+        // Try to get an available port
         let port;
         try {
             port = await getAvailablePort(basePort);
@@ -46,10 +87,12 @@ async function initializeServer() {
             throw error;
         }
 
+        // Start the server with the available port
         const server = app.listen(port, () => {
             console.log(`Server running at http://localhost:${port}`);
         });
 
+        // Handle server errors
         server.on('error', (error) => {
             if (error.code === 'EADDRINUSE') {
                 console.error(`Port ${port} is already in use. Please try a different port.`);
@@ -60,9 +103,11 @@ async function initializeServer() {
             }
         });
 
+        // Initialize database
         console.log('Waiting for database initialization...');
         const db = require('_helpers/db');
-
+        
+        // Wait for database to be ready
         let retries = 0;
         const maxRetries = 5;
         
@@ -71,8 +116,10 @@ async function initializeServer() {
                 await db.sequelize.authenticate();
                 console.log('Database connection authenticated successfully');
 
+                // Wait for tables to be created
                 await new Promise(resolve => setTimeout(resolve, 2000));
 
+                // Attempt to seed admin account
                 console.log('Attempting to seed admin account...');
                 await seedAdmin(db);
                 console.log('Admin account seeded successfully');
@@ -87,11 +134,10 @@ async function initializeServer() {
             }
         }
 
-        console.log('Server initialization completed successfully');
-        return { server, db };
+        return { server };
     } catch (error) {
-        console.error('Error during server initialization:', error);
-        throw error;
+        console.error('Fatal error during server initialization:', error);
+        process.exit(1);
     }
 }
 
@@ -99,26 +145,24 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-app.use(cors({ origin: (origin, callback) => callback(null, true), credentials: true }));
-
-// ✅ Root route for Render deployment
-app.get('/', (req, res) => {
-    res.send('Backend API is running 🎉');
-});
-
 // API routes
 app.use('/accounts', require('./accounts/accounts.controller'));
 app.use('/departments', require('./departments/departments.controller'));
 app.use('/employees', require('./employees/employees.controller'));
 app.use('/requests', require('./requests/request.controller'));
 
-// Swagger docs route
-app.use('/api-docs', require('_helpers/swagger'));
+// Serve static files from the Angular app
+app.use(express.static(path.join(__dirname, '../frontend/dist/cudillo-frontend/browser')));
+
+// Send all other requests to the Angular app
+app.get('/*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist/cudillo-frontend/browser/index.html'));
+});
 
 // Global error handler
 app.use(errorHandler);
 
-// Initialize server and database
+// Start the server
 initializeServer().catch(error => {
     console.error('Fatal error during server initialization:', error);
     process.exit(1);
