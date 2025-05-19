@@ -25,7 +25,6 @@ async function getAvailablePort(startPort) {
             return port;
         } catch (err) {
             if (err.code !== 'EADDRINUSE') throw err;
-            // Port is in use, try next one
             continue;
         }
     }
@@ -34,10 +33,8 @@ async function getAvailablePort(startPort) {
 
 async function initializeServer() {
     try {
-        // Get base port from environment or default
         const basePort = parseInt(process.env.PORT || '4000', 10);
         
-        // Try to get an available port
         let port;
         try {
             port = await getAvailablePort(basePort);
@@ -49,12 +46,10 @@ async function initializeServer() {
             throw error;
         }
 
-        // Start the server with the available port
         const server = app.listen(port, () => {
             console.log(`Server running at http://localhost:${port}`);
         });
 
-        // Handle server errors
         server.on('error', (error) => {
             if (error.code === 'EADDRINUSE') {
                 console.error(`Port ${port} is already in use. Please try a different port.`);
@@ -65,11 +60,9 @@ async function initializeServer() {
             }
         });
 
-        // Initialize database
         console.log('Waiting for database initialization...');
         const db = require('_helpers/db');
-        
-        // Wait for database to be ready
+
         let retries = 0;
         const maxRetries = 5;
         
@@ -78,10 +71,8 @@ async function initializeServer() {
                 await db.sequelize.authenticate();
                 console.log('Database connection authenticated successfully');
 
-                // Wait for tables to be created
                 await new Promise(resolve => setTimeout(resolve, 2000));
 
-                // Attempt to seed admin account
                 console.log('Attempting to seed admin account...');
                 await seedAdmin(db);
                 console.log('Admin account seeded successfully');
@@ -108,19 +99,23 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-// allow cors requests from any origin and with credentials
 app.use(cors({ origin: (origin, callback) => callback(null, true), credentials: true }));
 
-// api routes
+// ✅ Root route for Render deployment
+app.get('/', (req, res) => {
+    res.send('Backend API is running 🎉');
+});
+
+// API routes
 app.use('/accounts', require('./accounts/accounts.controller'));
 app.use('/departments', require('./departments/departments.controller'));
 app.use('/employees', require('./employees/employees.controller'));
 app.use('/requests', require('./requests/request.controller'));
 
-// swagger docs route
+// Swagger docs route
 app.use('/api-docs', require('_helpers/swagger'));
 
-// global error handler
+// Global error handler
 app.use(errorHandler);
 
 // Initialize server and database
