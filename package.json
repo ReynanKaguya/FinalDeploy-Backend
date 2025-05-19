@@ -8,6 +8,7 @@
         "url": "https://github.com/GlennPizon/Final.git"
     },
     "scripts": {
+        "build": "ng build --configuration=production",
         "start": "node ./server.js",
         "start:dev": "nodemon ./server.js"
     },

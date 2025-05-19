@@ -2,12 +2,11 @@ services:
   - type: web
     name: cudillo-backend
     env: node
+    branch: cudillo-backend
     rootDir: .
-    buildCommand: |
-      npm install
-      cd ../frontend && npm install && npm run build -- --configuration production
-      cd ../backend
-    startCommand: npm start
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    plan: free
     envVars:
       - key: NODE_ENV
         value: production

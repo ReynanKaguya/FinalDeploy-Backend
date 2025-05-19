@@ -152,11 +152,11 @@ app.use('/employees', require('./employees/employees.controller'));
 app.use('/requests', require('./requests/request.controller'));
 
 // Serve static files from the Angular app
-app.use(express.static(path.join(__dirname, '../frontend/dist/cudillo-frontend/browser')));
+app.use(express.static(path.join(__dirname, 'dist/cudillo-frontend/browser')));
 
 // Send all other requests to the Angular app
 app.get('/*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/cudillo-frontend/browser/index.html'));
+    res.sendFile(path.join(__dirname, 'dist/cudillo-frontend/browser/index.html'));
 });
 
 // Global error handler
