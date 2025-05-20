@@ -12,6 +12,7 @@ const net = require('net');
 // CORS configuration
 const allowedOrigins = [
     'http://localhost:4200',  // Angular dev server
+    'https://finaldeploy.onrender.com',  // Production domain
     /^https:\/\/.*\.netlify\.app$/  // All Netlify subdomains
 ];
 

@@ -23,4 +23,12 @@ services:
       - key: JWT_REFRESH_SECRET
         sync: false
       - key: PORT
-        value: 10000 
+        value: 10000
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false 

@@ -19,11 +19,11 @@ try {
         console.log('Using hardcoded fallback configuration');
         config = {
             database: {
-                host: "153.92.15.31",
-                port: 3306,
-                user: "u875409848_cudillo",
-                password: "9T2Z5$3UKkgSYzE",
-                database: "u875409848_cudillo"
+                host: process.env.DB_HOST || "DB_HOST",
+                port: process.env.DB_PORT || 3306,
+                user: process.env.DB_USER || "DB_USER",
+                password: process.env.DB_PASS || "DB_PASS",
+                database: process.env.DB_NAME || "DB_NAME"
             }
         };
     }
@@ -47,11 +47,11 @@ async function initialize() {
     try {
         // Use destructuring with fallbacks to prevent errors if properties are missing
         const { 
-            host = "153.92.15.31", 
-            port = 3306, 
-            user = "u875409848_cudillo", 
-            password = "9T2Z5$3UKkgSYzE", 
-            database = "u875409848_cudillo" 
+            host = process.env.DB_HOST || "DB_HOST", 
+            port = process.env.DB_PORT || 3306, 
+            user = process.env.DB_USER || "DB_USER", 
+            password = process.env.DB_PASS || "DB_PASS", 
+            database = process.env.DB_NAME || "DB_NAME" 
         } = config.database || {};
         
         console.log('Using database configuration:');
@@ -200,107 +200,81 @@ async function initialize() {
                 '`title` VARCHAR(255) NOT NULL,' +
                 '`firstName` VARCHAR(255) NOT NULL,' +
                 '`lastName` VARCHAR(255) NOT NULL,' +
-                '`acceptTerms` BOOLEAN DEFAULT true,' +
                 '`role` VARCHAR(255) NOT NULL,' +
-                '`isSuperAdmin` BOOLEAN DEFAULT false,' +
+                '`status` VARCHAR(255) NOT NULL,' +
                 '`verificationToken` VARCHAR(255),' +
                 '`verified` DATETIME,' +
                 '`resetToken` VARCHAR(255),' +
                 '`resetTokenExpires` DATETIME,' +
-                '`passwordReset` DATETIME,' +
-                '`created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,' +
-                '`updated` DATETIME,' +
-                'PRIMARY KEY (`id`),' +
-                'UNIQUE KEY `email_unique` (`email`)' +
-                ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;');
-            
+                '`created` DATETIME NOT NULL,' +
+                '`updated` DATETIME NOT NULL,' +
+                'PRIMARY KEY (`id`))');
+            console.log('Created table: accounts');
+
             await sequelize.query('CREATE TABLE IF NOT EXISTS `departments` (' +
                 '`id` INTEGER NOT NULL AUTO_INCREMENT,' +
                 '`name` VARCHAR(255) NOT NULL,' +
-                '`description` TEXT,' +
-                '`created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,' +
-                '`updated` DATETIME,' +
-                'PRIMARY KEY (`id`),' +
-                'UNIQUE KEY `name_unique` (`name`)' +
-                ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;');
-            
-            // 2. Tables depending on accounts
+                '`created` DATETIME NOT NULL,' +
+                '`updated` DATETIME NOT NULL,' +
+                'PRIMARY KEY (`id`))');
+            console.log('Created table: departments');
+
             await sequelize.query('CREATE TABLE IF NOT EXISTS `refreshTokens` (' +
                 '`id` INTEGER NOT NULL AUTO_INCREMENT,' +
-                '`accountId` INTEGER NOT NULL,' +
                 '`token` VARCHAR(255) NOT NULL,' +
                 '`expires` DATETIME NOT NULL,' +
-                '`created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,' +
+                '`created` DATETIME NOT NULL,' +
                 '`createdByIp` VARCHAR(255),' +
                 '`revoked` DATETIME,' +
                 '`revokedByIp` VARCHAR(255),' +
                 '`replacedByToken` VARCHAR(255),' +
+                '`accountId` INTEGER NOT NULL,' +
                 'PRIMARY KEY (`id`),' +
-                'KEY `fk_refresh_token_account` (`accountId`),' +
-                'CONSTRAINT `fk_refresh_token_account` FOREIGN KEY (`accountId`) REFERENCES `accounts` (`id`) ON DELETE CASCADE' +
-                ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;');
-            
-            // 3. Tables depending on accounts and departments
+                'FOREIGN KEY (`accountId`) REFERENCES `accounts` (`id`) ON DELETE CASCADE)');
+            console.log('Created table: refreshTokens');
+
             await sequelize.query('CREATE TABLE IF NOT EXISTS `employees` (' +
                 '`id` INTEGER NOT NULL AUTO_INCREMENT,' +
-                '`employeeId` VARCHAR(255) NOT NULL,' +
                 '`userId` INTEGER NOT NULL,' +
                 '`departmentId` INTEGER,' +
-                '`position` VARCHAR(255) NOT NULL,' +
-                '`hireDate` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,' +
-                '`status` ENUM("Active", "Inactive") NOT NULL DEFAULT "Active",' +
-                '`created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,' +
-                '`updated` DATETIME,' +
+                '`created` DATETIME NOT NULL,' +
+                '`updated` DATETIME NOT NULL,' +
                 'PRIMARY KEY (`id`),' +
-                'UNIQUE KEY `employeeId_unique` (`employeeId`),' +
-                'KEY `fk_employee_account` (`userId`),' +
-                'KEY `fk_employee_department` (`departmentId`),' +
-                'CONSTRAINT `fk_employee_account` FOREIGN KEY (`userId`) REFERENCES `accounts` (`id`) ON DELETE CASCADE,' +
-                'CONSTRAINT `fk_employee_department` FOREIGN KEY (`departmentId`) REFERENCES `departments` (`id`) ON DELETE SET NULL' +
-                ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;');
-            
-            // 4. Tables depending on employees
+                'FOREIGN KEY (`userId`) REFERENCES `accounts` (`id`) ON DELETE CASCADE,' +
+                'FOREIGN KEY (`departmentId`) REFERENCES `departments` (`id`) ON DELETE SET NULL)');
+            console.log('Created table: employees');
+
             await sequelize.query('CREATE TABLE IF NOT EXISTS `requests` (' +
                 '`id` INTEGER NOT NULL AUTO_INCREMENT,' +
                 '`employeeId` INTEGER NOT NULL,' +
-                '`type` VARCHAR(255) NOT NULL,' +
-                '`status` ENUM("Pending", "Approved", "Rejected") NOT NULL DEFAULT "Pending",' +
-                '`created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,' +
-                '`updated` DATETIME,' +
+                '`status` VARCHAR(255) NOT NULL,' +
+                '`created` DATETIME NOT NULL,' +
+                '`updated` DATETIME NOT NULL,' +
                 'PRIMARY KEY (`id`),' +
-                'KEY `fk_request_employee` (`employeeId`),' +
-                'CONSTRAINT `fk_request_employee` FOREIGN KEY (`employeeId`) REFERENCES `employees` (`id`) ON DELETE CASCADE' +
-                ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;');
-            
-            // 5. Tables depending on requests
+                'FOREIGN KEY (`employeeId`) REFERENCES `employees` (`id`) ON DELETE CASCADE)');
+            console.log('Created table: requests');
+
             await sequelize.query('CREATE TABLE IF NOT EXISTS `requestItems` (' +
                 '`id` INTEGER NOT NULL AUTO_INCREMENT,' +
                 '`requestId` INTEGER NOT NULL,' +
-                '`name` VARCHAR(255) NOT NULL,' +
-                '`quantity` INTEGER NOT NULL DEFAULT 1,' +
-                '`created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,' +
-                '`updated` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,' +
+                '`itemName` VARCHAR(255) NOT NULL,' +
+                '`quantity` INTEGER NOT NULL,' +
+                '`created` DATETIME NOT NULL,' +
+                '`updated` DATETIME NOT NULL,' +
                 'PRIMARY KEY (`id`),' +
-                'KEY `fk_request_item_request` (`requestId`),' +
-                'CONSTRAINT `fk_request_item_request` FOREIGN KEY (`requestId`) REFERENCES `requests` (`id`) ON DELETE CASCADE' +
-                ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;');
+                'FOREIGN KEY (`requestId`) REFERENCES `requests` (`id`) ON DELETE CASCADE)');
+            console.log('Created table: requestItems');
 
             // Re-enable foreign key checks
             await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
             console.log('Foreign key checks re-enabled');
-            
-            console.log('Database synchronized successfully');
-            
-            // Return the db object for use in seeding
-            return db;
 
         } catch (error) {
-            console.error('Error during database sync:', error);
-            // Re-enable foreign key checks even if there's an error
-            await sequelize.query('SET FOREIGN_KEY_CHECKS = 1').catch(console.error);
+            console.error('Error syncing database:', error);
             throw error;
         }
 
+        console.log('Database synced successfully');
     } catch (error) {
         console.error('Fatal error during database initialization:', error);
         process.exit(1);

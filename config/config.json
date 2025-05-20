@@ -5,6 +5,23 @@
       "database": "u875409848_cudillo",
       "host": "153.92.15.31",
       "dialect": "mysql"
+    },
+    "database": {
+        "host": "DB_HOST",
+        "user": "DB_USER",
+        "password": "DB_PASS",
+        "database": "DB_NAME"
+    },
+    "secret": "JWT_SECRET",
+    "emailFrom": "info@node-mysql-signup-verification-api.com",
+    "smtpOptions": {
+        "host": "SMTP_HOST",
+        "port": "SMTP_PORT",
+        "secure": false,
+        "auth": {
+            "user": "SMTP_USER",
+            "pass": "SMTP_PASS"
+        }
     }
-  }
+}
   
